@@ -1,23 +1,82 @@
-name: Rename me
+name: Symmetric Encrypt Decrypt
 description: |
-  Template repository for creating Composite Action with GitHub Actions.
+  This action performs symmetric encryption and decryption using AES-256-CBC,
+  supporting both operations with a provided key and IV.
+  It can be integrated into workflows to securely encrypt or decrypt data.
+  The key and IV are hashed using SHA-256 to ensure secure operations,
+  and the action performs encryption or decryption based on the specified operation.
 
   ## Usage
 
-  Write usage for your Composite Action.
+  ### Encrypt
 
   ```yaml
     steps:
-      - name: Template
-        uses: tmknom/template-composite-action@v0
+      - name: Symmetric Encrypt Decrypt
+        uses: tmknom/symmetric-encrypt-decrypt-action@v0
+        with:
+          data: plaintext
+          operation: encrypt
   ```
+
+  ### Decrypt
+
+  ```yaml
+    steps:
+      - name: Symmetric Encrypt Decrypt
+        uses: tmknom/symmetric-encrypt-decrypt-action@v0
+        with:
+          data: ciphertext
+          operation: decrypt
+  ```
+
+inputs:
+  data:
+    required: true
+    description: The data to be encrypted or decrypted. Provide as plaintext for encryption, or ciphertext for decryption.
+  operation:
+    required: true
+    description: The operation to perform, which can be either encrypt or decrypt.
+  key:
+    default: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.workflow_sha }}
+    required: true
+    description: The encryption key used for both encryption and decryption.
+  iv:
+    default: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.actor_id }}
+    required: true
+    description: The initialization vector used for encryption.
+
+outputs:
+  result:
+    value: ${{ join(steps.*.outputs.result) }}
+    description: The result of encryption or decryption (ciphertext or plaintext).
 
 runs:
   using: composite
 
   steps:
-    - name: Run
-      shell: bash
+    - name: Encrypt
+      id: encrypt
+      if: ${{ inputs.operation == 'encrypt' }}
+      env:
+        DATA: ${{ inputs.data }}
+        KEY: ${{ inputs.key }}
+        IV: ${{inputs.iv }}
       run: |
-        set -x
-        echo "Write steps"
+        key="$(sha256sum <<<"${KEY}" | cut -d' ' -f1)"
+        iv="$(sha256sum <<<"${IV}" | head -c 32)"
+        echo "result=$(openssl enc -aes-256-cbc -K "${key}" -iv "${iv}" -base64 <<<"${DATA}")" >> "${GITHUB_OUTPUT}"
+      shell: bash
+
+    - name: Decrypt
+      id: decrypt
+      if: ${{ inputs.operation == 'decrypt' }}
+      env:
+        DATA: ${{ inputs.data }}
+        KEY: ${{ inputs.key }}
+        IV: ${{inputs.iv }}
+      run: |
+        key="$(sha256sum <<<"${KEY}" | cut -d' ' -f1)"
+        iv="$(sha256sum <<<"${IV}" | head -c 32)"
+        echo "result=$(openssl enc -d -aes-256-cbc -K "${key}" -iv "${iv}" -base64 <<<"${DATA}")" >> "${GITHUB_OUTPUT}"
+      shell: bash
