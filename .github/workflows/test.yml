@@ -25,24 +25,25 @@ jobs:
       - name: Checkout
         uses: tmknom/checkout-action@v1
 
-      - name: Setup
-        run: |
-          set -x
-          echo "Setup"
-
-      - name: Exercise
-        id: exercise
+      - name: Exercise encrypt
+        id: encrypt
         uses: ./
+        with:
+          data: foobar
+          operation: encrypt
+
+      - name: Exercise decrypt
+        id: decrypt
+        uses: ./
+        with:
+          data: ${{ steps.encrypt.outputs.result }}
+          operation: decrypt
 
       - name: Verify
         env:
-          OUTCOME: ${{ steps.exercise.outcome }}
+          ENCRYPTED: ${{ steps.encrypt.outputs.result }}
+          DECRYPTED: ${{ steps.decrypt.outputs.result }}
         run: |
           set -x
-          test "${OUTCOME}" = "success"
-
-      - name: Teardown
-        if: ${{ always() }}
-        run: |
-          set -x
-          echo "Teardown"
+          [[ "${#ENCRYPTED}" -ge 20 ]]
+          test "${DECRYPTED}" = "foobar"
