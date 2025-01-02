@@ -66,7 +66,6 @@ runs:
         key="$(sha256sum <<<"${KEY}" | cut -d' ' -f1)"
         iv="$(sha256sum <<<"${IV}" | head -c 32)"
         result="$(openssl enc -aes-256-cbc -K "${key}" -iv "${iv}" -base64 <<<"${DATA}")"
-        echo "::add-mask::${result}"
         echo "result=${result}" >> "${GITHUB_OUTPUT}"
       shell: bash
 
