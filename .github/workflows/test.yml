@@ -15,8 +15,35 @@ defaults:
     shell: bash
 
 jobs:
-  test:
-    name: Test
+  test-encrypt:
+    name: Test encrypt
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.exercise.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: tmknom/checkout-action@v1
+
+      - name: Exercise
+        id: exercise
+        uses: ./
+        with:
+          data: foobar
+          operation: encrypt
+
+      - name: Verify
+        env:
+          ENCRYPTED: ${{ steps.exercise.outputs.result }}
+        run: |
+          set -x
+          [[ "${#ENCRYPTED}" -ge 20 ]]
+
+  test-decrypt:
+    name: Test decrypt
+    needs: [test-encrypt]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -25,25 +52,16 @@ jobs:
       - name: Checkout
         uses: tmknom/checkout-action@v1
 
-      - name: Exercise encrypt
-        id: encrypt
+      - name: Exercise
+        id: exercise
         uses: ./
         with:
-          data: foobar
-          operation: encrypt
-
-      - name: Exercise decrypt
-        id: decrypt
-        uses: ./
-        with:
-          data: ${{ steps.encrypt.outputs.result }}
+          data: ${{ needs.test-encrypt.outputs.result }}
           operation: decrypt
 
       - name: Verify
         env:
-          ENCRYPTED: ${{ steps.encrypt.outputs.result }}
-          DECRYPTED: ${{ steps.decrypt.outputs.result }}
+          DECRYPTED: ${{ steps.exercise.outputs.result }}
         run: |
           set -x
-          [[ "${#ENCRYPTED}" -ge 20 ]]
           test "${DECRYPTED}" = "foobar"
