@@ -31,7 +31,7 @@ jobs:
         id: exercise
         uses: ./
         with:
-          data: foobar
+          data: Provide a sufficiently long text to avoid encountering a 'bad decrypt' error.
           operation: encrypt
 
       - name: Verify
@@ -39,7 +39,7 @@ jobs:
           ENCRYPTED: ${{ steps.exercise.outputs.result }}
         run: |
           set -x
-          [[ "${#ENCRYPTED}" -ge 20 ]]
+          [[ "${#ENCRYPTED}" -ge 100 ]]
 
   test-decrypt:
     name: Test decrypt
@@ -64,4 +64,4 @@ jobs:
           DECRYPTED: ${{ steps.exercise.outputs.result }}
         run: |
           set -x
-          test "${DECRYPTED}" = "foobar"
+          test "${DECRYPTED}" = "Provide a sufficiently long text to avoid encountering a 'bad decrypt' error."
